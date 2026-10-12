@@ -1,0 +1,7 @@
+rm default
+gcc default.c -o default -I/usr/local/include -L/usr/local/lib -ldiscord -lcurl -lpthread -lcrypto
+./default
+
+nano /etc/systemd/system/discord-bot-C.service
+sudo systemctl daemon-reload
+sudo systemctl restart discord-bot-C.service

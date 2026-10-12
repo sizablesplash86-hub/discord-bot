@@ -1,0 +1,27 @@
+HTTP_SEND_GET [USER_AGENT] - 2026-08-30T22:47:14.165Z - https://discord.com/api/v10/gateway/bot
+User-Agent: Cogmasters (https://github.com/Cogmasters)
+Authorization: <<REDACTED>>
+
+@@@_1_@@@
+HTTP_RCV_UNAUTHORIZED(401) [USER_AGENT] - 2026-08-30T22:47:14.388Z - https://discord.com/api/v10/gateway/bot
+date: Sun, 30 Aug 2026 21:47:14 GMT
+content-type: application/json
+content-length: 43
+server: cloudflare
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+x-discord-features: bots
+via: 1.1 google
+alt-svc: h3=":443"; ma=86400
+cf-cache-status: BYPASS
+set-cookie: __dcfduid=5ccf97d8a4bc11f185ad5d937b0d8bac; Expires=Fri, 29-Aug-2031 21:47:14 GMT; Max-Age=157680000; Secure; HttpOnly; Path=/; SameSite=Lax
+set-cookie: __sdcfduid=5ccf97d8a4bc11f185ad5d937b0d8bacd5e2ae14d7a4074bbd1b045839d367d220daaddfda74a2a8b4cad983454e89f1; Expires=Fri, 29-Aug-2031 21:47:14 GMT; Max-Age=157680000; Secure; HttpOnly; Path=/; SameSite=Lax
+set-cookie: _cfuvid=_5R8I74FbeEFh40dqkZI46Mho8I9sEMw3zmD5OqgO4w-1788126434.2594044-1.0.1.1-86.FMheMS4ijsuuqfq5Z3eiWIqMaoWIGyyCM8EXE_H8; HttpOnly; SameSite=None; Secure; Path=/; Domain=discord.com
+x-content-type-options: nosniff
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=hCEgupKwKVD1I1%2B9Z7hykKaHUMcKCPX1%2FuV1tm9LtaW%2BwwQ84zrcXFqKqeMrNQ3yv3myH9gCrLjD%2BMqW6qK8sAU%2FbPqyV2jeJ%2F6AtoywZSHWDrKzS4xfyb6cZK71"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+reporting-endpoints: csp-sentry="https://o64374.ingest.sentry.io/api/5441894/security/?sentry_key=8fbbce30bf5244ec9429546beef21870&sentry_environment=stable"
+content-security-policy: frame-ancestors 'none'; default-src https://o64374.ingest.sentry.io; report-to csp-sentry; report-uri https://o64374.ingest.sentry.io/api/5441894/security/?sentry_key=8fbbce30bf5244ec9429546beef21870&sentry_environment=stable
+cf-ray: a336fe261810ad0e-MSP
+
+{"message": "401: Unauthorized", "code": 0}
+@@@_2_@@@

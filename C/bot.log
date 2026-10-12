@@ -1,0 +1,6 @@
+16:47:14 [94mTRACE[0m [90mdiscord-rest_ratelimit.c:252:[0m [DISCORD_RATELIMIT] [null] Couldn't match known buckets to ':1:gateway:bot'
+16:47:14 [35mFATAL[0m [90mdiscord-rest_request.c:186:[0m [DISCORD_REQUEST] UNAUTHORIZED: Please provide a valid authentication token
+16:47:14 [31mERROR[0m [90mdiscord-rest_request.c:391:[0m [DISCORD_REQUEST] {"message": "401: Unauthorized", "code": 0}
+16:47:14 [36mDEBUG[0m [90mdiscord-rest_ratelimit.c:301:[0m [DISCORD_RATELIMIT] [miss] Match ':1:gateway:bot' to bucket
+16:47:14 [36mDEBUG[0m [90mdiscord-rest_ratelimit.c:357:[0m [DISCORD_RATELIMIT] [miss] Remaining = 1 | Reset = 0
+16:47:14 [35mFATAL[0m [90mdiscord-gateway.c:748:[0m [DISCORD_GATEWAY] Couldn't retrieve Gateway Bot information
