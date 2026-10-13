@@ -5,10 +5,9 @@ void hist(struct discord *client, const struct discord_message *event)
   if (!event || !event->author) return;
   if (event->author->bot) return;
 
-  // Print out what the content actually is to debug
   if (event->content)
   {
-    printf("Message content was: '%s'\n", event->content);
+    printf("Message content was: \"%s\"\n", event->content);
     
     if (strstr(event->content, "unix") != NULL || strstr(event->content, "UNIX") != NULL)
     {
