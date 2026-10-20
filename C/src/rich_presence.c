@@ -28,10 +28,10 @@ static void set_status(struct discord *client, const char *status, enum discord_
 
 static int load_presence(struct discord *client)
 {
-  FILE *ts = fopen("rich_presence.conf", "r");  // Opens config file
+  FILE *ts = fopen("bot_config.conf", "r");  // Opens config file
   if (ts == NULL)
   {
-    printf("Failed to open rich presence config file.\n");
+    printf("Failed to open config file.\n");
     return 0;
   }
 
@@ -49,15 +49,15 @@ static int load_presence(struct discord *client)
 
   if (!found)
   {
-    printf("Status not found in config.\n");
+    printf("Rich presence not found in config.\n");
     return 0;
   }
 
-  line[strcspn(line, "\r\n;")] = 0;
   char *rich_prs = line + 16;
-  while (*rich_prs == ' ' || *rich_prs == '\t') rich_prs++;
+  line[strcspn(line, "\r\n#")] = 0;
+  rich_prs[strcspn(rich_prs, "\r\n#")] = 0;
 
-  printf("Status = %s\n", rich_prs);
+  printf("Rich presence = %s\n", rich_prs);
   set_status(client, "online", DISCORD_ACTIVITY_GAME, rich_prs);  // Parses status to it
   return 1;
 }

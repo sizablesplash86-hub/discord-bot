@@ -3,4 +3,6 @@
 void on_interaction(struct discord *client, const struct discord_interaction *event)
 {
   arch_interaction(client, event);
+
+  fake_ban_interaction(client, event);
 }

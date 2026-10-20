@@ -1,0 +1,15 @@
+/* This reference for if you desire to use this code yourself */
+
+#define BOT_TOKEN "INSERT_TOKEN_HERE"
+#define STATUS_CHANNEL_ID 898989898989898ULL
+#define ALERT_CHANNEL_ID 89898989898989898ULL
+#define ADMIN_USER_ID 89898989898989898LL
+#define BOT_TESTING_CHANNEL 98989898989898ULL
+
+/* For status checker specifically */
+#define TEMP_CHANNEL_ID 5465347665544445ULL
+#define SERVER_HOST          "server_ip_here"  // Tailscale IP or LAN, whatever you're using
+#define SERVER_PORT          "22"  // Change to what needed or keep the same
+#define SSH_USER             "root"  // If you have root login permitted
+#define TEMP_THRESHOLD       80.0
+#define CHECK_INTERVAL_MS    15000
