@@ -10,34 +10,31 @@ int create_conf(void)
   }
 
   fprintf(fp,
-    "# Hello! Welcome to my discord bot commands. This config will likely be changed and updated in future releases. Make sure to delete this file each time\n"
-    "# This config file allows you the downloader to use my code without me exposing my token or you compiling it yourself.\n"
-    "# This program is exclusive to the POSIX operating systems thanks to the header sys/stat.h so this will not work on Windows. Actually, I just looked it up, this code might work on Windows. I'll have to try it. Currently in version 1.0, the only thing in the config is the bot token and status stuff as you can see. I'll update these for future releases.\n"
-    "# thank you for using the lorem ipsum binary\n\n"
+    "# This allows you to make your own commands.\n\n"
 
     "main {  # housing of the main config info\n"
-    "  version = %s  # do not change this, this is to make sure your config isn't missing stuff the code expects\n\n"
+    "  version %s;  # do not change this, this is to make sure your config isn't missing stuff the code expects\n\n"
 
-    "  bot_name _;  # input the name for commands and such\n"
+    "  bot_name \"_\";  # input the name for commands and such\n"
     "  BOT_TOKEN _;   # Replace the underscore with your bot token\n"
     "}\n\n"
 
     "status {\n"
-    "  rich_presence _;   # add a rich presence if desired\n"
-    "  custom_status _;   # add a custom status if desired\n"
+    "  rich_presence \"_\";   # add a rich presence if desired\n"
+    "  custom_status \"_\";   # add a custom status if desired\n"
     "}\n\n"
     
     "text_cmds {  # text commands. Like if some says \"UNIX\" it'll print what you wanna say\n"
-    "#  # example _;  # replace the example with your desired command\n"
-    "#  # !example2 \"runs your example\";\n"
-    "#  # example3 \"When someone says the word 'example3', it'll print this\";\n"
+    "#  #example \"_\";  # replace the example with your desired command\n"
+    "#  #!example2 \"runs your example\";\n"
+    "#  #example3 \"When someone says the word 'example3', it'll print this\";\n"
     "}\n\n"
-    
+
     "slash_cmds {  # slash commands a part of the app\n"
-    "  example {\n"
-    "    desc \"example bot command\";  # this is the description for the bot\n"
-    "    output \"what the bot will say\";  # the output when the slash command is run\n"
-    "  }\n"
+    "#  #example {  # name of the command. So it'll be '/example' to run.\n"
+    "#    #desc \"example bot command\";  # this is the description for the bot\n"
+    "#   #output \"what the bot will say\";  # the output when the slash command is run\n"
+    "#  #}\n"
     "}\n\n"
 
     "# more to be added eventually, idk when\n",
@@ -87,7 +84,7 @@ int startup(void)
 {
   printf("\nOpening config...\n");
 
-  FILE *cf = fopen("bot_config.conf", "r");
+  FILE *cf = fopen(BOT_CONF, "r");
   if (cf == NULL)
   {
     printf("Config file not found! Creating one...\n");
@@ -95,7 +92,10 @@ int startup(void)
     return -1;
   }
 
-  bt_conf();
+  else 
+  {
+    if (bt_conf() != 0) return -1;
+  }
 
   return 0;
 }

@@ -3,10 +3,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h>
 
 /* POSIX headers */
 #include <sys/stat.h>  // used by the rich presence thing
-#include <ctype.h>
 
 /* Concord headers */
 #include <concord/discord.h>
@@ -24,6 +24,8 @@
 
 /* Characters */
 extern char BOT_TOKEN[256];
+extern char status[256];
+extern char rich_prcnse[256];
 
 /* config file */
 int startup(void);

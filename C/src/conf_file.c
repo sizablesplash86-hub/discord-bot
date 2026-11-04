@@ -1,11 +1,8 @@
 #include "config.h"
-#include <string.h>
-
-// SpyderFly's site config reader to modify later
 
 typedef struct
 {
-  char version[10];
+  char version[20];
   char bot_name[128];
   char bot_token[256];
   char rich_presence[512];
@@ -52,11 +49,31 @@ int next_token(FILE *fp, char *buf, size_t max_len)
   if (c == EOF) return 0;
 
   c = fgetc(fp);
+  
+  // Handle structural single-character tokens
   if (c == '{' || c == '}' || c == ';')
   {
     buf[0] = (char)c;
     buf[1] = '\0';
     return 1;
+  }
+
+  // Handle quoted strings (e.g. "Lorem Ipsum")
+  if (c == '"')
+  {
+    while ((c = fgetc(fp)) != EOF)
+    {
+      if (c == '"') // Closing quote found
+      {
+        break;
+      }
+      if (len < max_len - 1)
+      {
+        buf[len++] = (char)c;
+      }
+    }
+    buf[len] = '\0';
+    return len > 0 ? 1 : 0;
   }
 
   ungetc(c, fp);
@@ -86,11 +103,14 @@ int parse_config(bot_config *config)
   }
 
   char token[256];
+
   int inside_server_block = 0;
   int inside_main_block = 0;
   int inside_status_block = 0;
   int inside_text_block = 0;
   int inside_app_block = 0;
+
+  char error[512];
 
   while (next_token(fp, token, sizeof(token)))
   {
@@ -99,6 +119,7 @@ int parse_config(bot_config *config)
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
         inside_main_block = 1;
+        continue;
       }
       else
       {
@@ -108,11 +129,12 @@ int parse_config(bot_config *config)
       }
     }
 
-    if (strcmp(token, "status") == 0)
+    else if (strcmp(token, "status") == 0)
     {
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
         inside_status_block = 1;
+        continue;
       }
       else
       {
@@ -122,11 +144,12 @@ int parse_config(bot_config *config)
       }
     }
 
-    if (strcmp(token, "text_cmds") == 0)
+    else if (strcmp(token, "text_cmds") == 0)
     {
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
         inside_text_block = 1;
+        continue;
       }
       else
       {
@@ -136,11 +159,12 @@ int parse_config(bot_config *config)
       }
     }
 
-    if (strcmp(token, "slash_cmds") == 0)
+    else if (strcmp(token, "slash_cmds") == 0)
     {
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
         inside_app_block = 1;
+        continue;
       }
       else
       {
@@ -157,7 +181,7 @@ int parse_config(bot_config *config)
       if (strcmp(token, "}") == 0)
       {
         inside_main_block = 0;
-        break; 
+        continue; 
       }
 
       int directive_handled = 1;
@@ -168,6 +192,7 @@ int parse_config(bot_config *config)
         {
           snprintf(config->version, sizeof(config->version), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
 
       else if (strcmp(token, "bot_name") == 0)
@@ -176,6 +201,7 @@ int parse_config(bot_config *config)
         {
           snprintf(config->bot_name, sizeof(config->bot_name), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
 
       else if (strcmp(token, "BOT_TOKEN") == 0)
@@ -184,6 +210,7 @@ int parse_config(bot_config *config)
         {
           snprintf(config->bot_token, sizeof(config->bot_token), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
 
       else
@@ -212,7 +239,7 @@ int parse_config(bot_config *config)
       if (strcmp(token, "}") == 0)
       {
         inside_status_block = 0;
-        break; 
+        continue; 
       }
 
       int directive_handled = 1;
@@ -224,6 +251,7 @@ int parse_config(bot_config *config)
         {
           snprintf(config->rich_presence, sizeof(config->rich_presence), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
 
       else if (strcmp(token, "custom_status") == 0)
@@ -232,6 +260,7 @@ int parse_config(bot_config *config)
         {
           snprintf(config->status, sizeof(config->status), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
 
       else
@@ -264,6 +293,8 @@ int parse_config(bot_config *config)
     {
       TODO2: // add this later
     }
+
+    else printf("Testing\n");
   }
   fclose(fp);
   return 0;
@@ -277,7 +308,7 @@ int bt_conf(void)
   {
     if (strcmp(cfg.bot_token, "_") == 0)
     {
-      printf("ERROR! Please enter bot token\n");
+      printf("BOT TOKEN NOT FOUND!! Please enter one.\n");
       return -1;
     }
     else printf("Sucessfully read bot config\n");
@@ -288,6 +319,27 @@ int bt_conf(void)
     printf("Error in bot config\n");
     return -1;
   }
+
+  int cfgmaj, cfgmin, cfgpat;
+  int curmaj, curmin, curpat;
+
+  sscanf(cfg.version, "%d.%d.%d", &cfgmaj, &cfgmin, &cfgpat);
+  sscanf(CURRENT_VERSION, "%d.%d.%d", &curmaj, &curmin, &curpat);
+
+  if (cfgmaj < curmaj || cfgmin < curmin || cfgpat < curpat)
+  {
+    printf(
+      "\nERROR! Config version is less than code version\n"
+      "  Config version = %d.%d.%d\n"
+      "  Code version = %d.%d.%d\n"
+      "Please delete config and rerun\n\n",
+      cfgmaj, cfgmin, cfgpat, curmaj, curmin, curpat
+    );
+    return -1;
+  }
+
+  snprintf(BOT_TOKEN, sizeof(BOT_TOKEN), "%s", cfg.bot_token);
+  snprintf(rich_prcnse, sizeof(rich_prcnse), "%s", cfg.rich_presence);
 
   TODO3: // add some way to continue from here
 

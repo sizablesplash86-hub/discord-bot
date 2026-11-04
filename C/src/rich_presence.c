@@ -28,37 +28,8 @@ static void set_status(struct discord *client, const char *status, enum discord_
 
 static int load_presence(struct discord *client)
 {
-  FILE *ts = fopen("bot_config.conf", "r");  // Opens config file
-  if (ts == NULL)
-  {
-    printf("Failed to open config file.\n");
-    return 0;
-  }
-
-  char line[1024];
-  int found = 0;
-  while (fgets(line, sizeof(line), ts) != NULL)
-  {
-    if (strncmp(line, "rich_presence = ", 16) == 0)
-    {
-      found = 1;
-      break;
-    }
-  }
-  fclose(ts);
-
-  if (!found)
-  {
-    printf("Rich presence not found in config.\n");
-    return 0;
-  }
-
-  char *rich_prs = line + 16;
-  line[strcspn(line, "\r\n#")] = 0;
-  rich_prs[strcspn(rich_prs, "\r\n#")] = 0;
-
-  printf("Rich presence = %s\n", rich_prs);
-  set_status(client, "online", DISCORD_ACTIVITY_GAME, rich_prs);  // Parses status to it
+  printf("Rich presence = %s\n", rich_prcnse);
+  set_status(client, "online", DISCORD_ACTIVITY_GAME, rich_prcnse);  // Parses status to it
   return 1;
 }
 
@@ -72,7 +43,7 @@ void on_cycle(struct discord *client)
   last_check = now;
 
   struct stat st;
-  if (stat("bot_config.conf", &st) != 0) return;
+  if (stat(BOT_CONF, &st) != 0) return;
   if (st.st_mtime == last_mtime) return;
 
   last_mtime = st.st_mtime;
@@ -82,6 +53,6 @@ void on_cycle(struct discord *client)
 void rich_presence(struct discord *client, const struct discord_ready *event)
 {
   struct stat st;
-  if (stat("bot_config.conf", &st) == 0) last_mtime = st.st_mtime;
+  if (stat(BOT_CONF, &st) == 0) last_mtime = st.st_mtime;
   load_presence(client);
 }

@@ -1,14 +1,12 @@
 #include "config.h"
 
 char BOT_TOKEN[256];
+char rich_prcnse[256];
+char status[256];
 
 int main(void)
 {
-  if (startup() != 0)
-  {
-    printf("Something failed\n");
-    return -1;
-  }
+  if (startup() != 0) return -1;
 
   struct discord *client = discord_init(BOT_TOKEN);
   discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);

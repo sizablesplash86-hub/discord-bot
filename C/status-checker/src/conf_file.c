@@ -1,6 +1,6 @@
 #include "config.h"
 
-// SpyderFly's site config reader to modify later
+// Just steal the one from the main bot
 
 typedef struct
 {
