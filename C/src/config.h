@@ -13,18 +13,21 @@
 #include <concord/log.h>
 #include <concord/discord_codecs.h>
 
-#include <windows_headers/windows.h>
-
 /* Define stuff */
 #define GUILD_ID 1234567898765431
+
+// Uneeded now
 #define REPO_URL "https://api.github.com/repos/sizablesplash86-hub/discord-bot/releases/latest"
+
 #define CURRENT_VERSION "1.0.1"
+#define BOT_CONF "bot_config.conf"
 
 /* Characters */
 extern char BOT_TOKEN[256];
 
 /* config file */
 int startup(void);
+int bt_conf(void);
 
 /* basic needed stuff */
 void on_ready(struct discord *client, const struct discord_ready *event);

@@ -1,14 +1,24 @@
 #include "config.h"
 
-// Leaving this here, this is the function for DaemonCraft's config file that'll help
+// SpyderFly's site config reader to modify later
 
-typedef struct {
-    char edition[64];
-    char version[512];
-    char mod[128];
-    char min[20];
-    char max[20];
-} ServerConfig;
+typedef struct
+{
+  char active[8];
+  char bot_token[128];
+  u64snowflake testing_channel;
+  u64snowflake status_channel_id;
+  u64snowflake admin_user_id;
+  u64snowflake alert_channel_id;
+  u64snowflake temp_channel_id;
+  u64snowflake status_msg_id;
+  u64snowflake temp_msg_id;
+  char server_host[256];
+  int server_port;
+  char ssh_user[64];
+  float temp_threshold;
+  long check_interval_ms;
+} bot_config;
 
 int next_token(FILE *fp, char *buf, size_t max_len)
 {
@@ -19,7 +29,6 @@ int next_token(FILE *fp, char *buf, size_t max_len)
   {
     if (c == '#')
     {
-      // Skip until end of line
       while ((c = fgetc(fp)) != EOF && c != '\n');
       continue;
     }
@@ -57,58 +66,110 @@ int next_token(FILE *fp, char *buf, size_t max_len)
   return len > 0 ? 1 : 0;
 }
 
-int parse_config(const char *inst_conf, ServerConfig *config)
+int parse_config(const char *fullpath, ServerConfig *config)
 {
-  FILE *fp = fopen(inst_conf, "r");
+  FILE *fp = fopen(fullpath, "r");
   if (!fp)
   {
-    printf("Failed to open config file: %s\n", inst_conf);
+    printf("Failed to open config file: %s\n", fullpath);
     return -1;
   }
 
   char token[256];
+  int inside_server_block = 0;
 
   while (next_token(fp, token, sizeof(token)))
   {
-    if (strcmp(token, "edition") == 0)
+    if (strcmp(token, "server") == 0)
     {
-      if (next_token(fp, token, sizeof(token)))
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
-        snprintf(config->edition, sizeof(config->edition), "%s", token);
+        inside_server_block = 1;
       }
-    }
-    else if (strcmp(token, "version") == 0)
+      else
+      {
+        printf("Syntax error: expected '{' after server\n");
+        fclose(fp);
+        return -1;
+      }
+    } 
+    else if (inside_server_block)
     {
-      if (next_token(fp, token, sizeof(token)))
+      if (strcmp(token, "}") == 0)
       {
-        snprintf(config->version, sizeof(config->version), "%s", token);
+        inside_server_block = 0;
+        break; 
       }
-    }
-    else if (strcmp(token, "mod") == 0)
-    {
-      if (next_token(fp, token, sizeof(token)))
-      {
-        snprintf(config->mod, sizeof(config->mod), "%s", token);
-      }
-    }
-    else if (strcmp(token, "min") == 0)
-    {
-      if (next_token(fp, token, sizeof(token)))
-      {
-        snprintf(config->min, sizeof(config->min), "%s", token);
-      }
-    }
-    else if (strcmp(token, "max") == 0)
-    {
-      if (next_token(fp, token, sizeof(token)))
-      {
-        snprintf(config->max, sizeof(config->max), "%s", token);
-      }
-    }
 
+      int directive_handled = 1;
+
+      if (strcmp(token, "listen") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->port, sizeof(config->port), "%s", token);
+        }
+      } 
+      else if (strcmp(token, "root") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          size_t len = strlen(token);
+          if (len > 1 && token[len - 1] == '/') token[len - 1] = '\0';
+          snprintf(config->root, sizeof(config->root), "%s", token);
+        }
+      } 
+      else if (strcmp(token, "server_name") == 0) 
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->domain, sizeof(config->domain), "%s", token);
+        }
+      }
+      else if (strcmp(token, "ssl_certificate") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->fullchain, sizeof(config->fullchain), "%s", token);
+        }
+      }
+      else if (strcmp(token, "ssl_certificate_key") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->privkey, sizeof(config->privkey), "%s", token);
+        }
+      }
+      else if (strcmp(token, "ssl_trusted_certificate") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->trusted_cert, sizeof(config->trusted_cert), "%s", token);
+        }
+      }
+      else
+      {
+        directive_handled = 0;
+        char skip_token[256];
+        while (next_token(fp, skip_token, sizeof(skip_token)))
+        {
+          if (strcmp(skip_token, ";") == 0) break;
+        }
+      }
+
+      if (directive_handled)
+      {
+        if (next_token(fp, token, sizeof(token)) && strcmp(token, ";") != 0)
+        {
+          printf("Syntax error: missing ';' after directive\n");
+          fclose(fp);
+          return -1;
+        }
+      }
+    }
     else
     {
-      printf("Sum kinda error occured idfk\n");
+      printf("Could not find server block\n");
       return -1;
     }
   }
@@ -116,39 +177,32 @@ int parse_config(const char *inst_conf, ServerConfig *config)
   return 0;
 }
 
-int inst_conf_file(const char *inst_name, const char *inst_path)
+int ste_conf(const char *full_path, const char *site_name)
 {
-  printf("Opening config...\n");
-
-  char inst_conf[256];
-  snprintf(inst_conf, sizeof(inst_conf), "%s/%s.conf", inst_path, inst_name);
-
   ServerConfig cfg = {0};
 
-  if (parse_config(inst_conf, &cfg) == 0)
+  if (parse_config(full_path, &cfg) == 0)
   {
     printf("Successfully Parsed Config:\n"
-      "  Edition:   %s\n"
-      "  Version:   %s\n"
-      "  Mod:       %s\n"
-      "  Min:       %s\n"
-      "  Max:       %s\n",
-      cfg.edition, cfg.version, cfg.mod, cfg.min, cfg.max
+      "  Port:        %s\n"
+      "  Root:        %s\n"
+      "  Server Name: %s\n\n"
+
+      "  SSL info:\n"
+      "    fullchain:      %s\n"
+      "    privkey:        %s\n"
+      "    trusted_cert:   %s\n",
+      cfg.port, cfg.root, cfg.domain,
+
+      cfg.fullchain, cfg.privkey, cfg.trusted_cert
     );
   }
 
   else
   {
-    printf("Sum error occured, what do you want?\n");
+    printf("Error in site config\n");
     return -1;
   }
-
-  char inst_edition[64], inst_version[512], inst_mod[128], inst_min[20], inst_max[20];
-  snprintf(inst_edition, sizeof(inst_edition), "%s", cfg.edition);
-  snprintf(inst_version, sizeof(inst_version), "%s", cfg.version);
-  snprintf(inst_mod, sizeof(inst_mod), "%s", cfg.mod);
-  snprintf(inst_min, sizeof(inst_min), "%s", cfg.min);
-  snprintf(inst_max, sizeof(inst_max), "%s", cfg.max);
 
   return 0;
 }
