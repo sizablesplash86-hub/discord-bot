@@ -3,6 +3,7 @@
  * * * * * * * * * * */
 
 #include "src/config.h"
+#include <hide_from_github/bot.h>
 
 /* Global state */
 static u64snowflake status_message_id = 0;

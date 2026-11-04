@@ -177,7 +177,7 @@ static struct discord_embed build_status_embed(bool is_online, double temp_val, 
   static char cpu_str[64], ram_str[128];
   bool has_stats = get_system_stats(cpu_str, sizeof(cpu_str), ram_str, sizeof(ram_str));
 
-  snprintf(temp_channel_str, temp_channel_size, "Check <#%d>", cfg.temp_channel_id);
+  snprintf(temp_channel_str, temp_channel_size, "Check <#%ld>", cfg.temp_channel_id);
 
   time_t now = time(NULL);
   snprintf(updated_str, updated_str_size, "<t:%ld:t> (<t:%ld:R>)", (long)now, (long)now);
@@ -208,11 +208,34 @@ static struct discord_embed build_status_embed(bool is_online, double temp_val, 
   };
 }
 
-/* Combined periodic worker loop */
 static void on_check_timer(struct discord *client)
 {
   time_t current_time = time(NULL);
 
+  /* 1. Find existing status message on initial execution */
+  if (!status_msg_searched)
+  {
+    status_msg_searched = true;
+    struct discord_get_channel_messages params = { .limit = 50 };
+    struct discord_messages msgs = { 0 };
+
+    struct discord_ret_messages ret = { .sync = &msgs };
+    if (CCORD_OK == discord_get_channel_messages(client, cfg.status_channel_id, &params, &ret))
+    {
+      const struct discord_user *bot_user = discord_get_self(client);
+      for (int i = 0; i < msgs.size; i++)
+      {
+        if (msgs.array[i].author->id == bot_user->id && msgs.array[i].embeds->size > 0)
+        {
+          status_message_id = msgs.array[i].id;
+          break;
+        }
+      }
+      discord_messages_cleanup(&msgs);
+    }
+  }
+
+  /* 2. Fetch metrics */
   bool is_online = check_remote_server(cfg.server_host, cfg.server_port, 3);
   double temp_val = get_laptop_temp_raw();
 
@@ -232,11 +255,12 @@ static void on_check_timer(struct discord *client)
   last_server_state = is_online;
   has_run_once = true;
 
+  /* 3. Handle Server Up/Down Alerts */
   if (!is_online && !server_offline_alert_active)
   {
     server_offline_alert_active = true;
     char msg[256];
-    snprintf(msg, sizeof(msg), "<@%d> **SERVER OFFLINE ALERT**\nThe HP Compaq Server went offline at <t:%ld:t>!", cfg.admin_user_id, (long)current_time);
+    snprintf(msg, sizeof(msg), "<@%llu> **SERVER OFFLINE ALERT**\nThe HP Compaq Server went offline at <t:%ld:t>!", (unsigned long long)cfg.admin_user_id, (long)current_time);
 
     struct discord_create_message params = { .content = msg };
     discord_create_message(client, cfg.alert_channel_id, &params, NULL);
@@ -249,13 +273,14 @@ static void on_check_timer(struct discord *client)
     discord_create_message(client, cfg.alert_channel_id, &params, NULL);
   }
 
+  /* 4. Handle Thermal Alerts */
   if (temp_val > 0.0)
   {
     if (temp_val >= cfg.temp_threshold && !temp_alert_active)
     {
       temp_alert_active = true;
       char msg[256];
-      snprintf(msg, sizeof(msg), "<@%d> **HIGH TEMPERATURE ALERT**\nLaptop CPU temperature is critical: **%.1f°C**!", cfg.admin_user_id, temp_val);
+      snprintf(msg, sizeof(msg), "<@%llu> **HIGH TEMPERATURE ALERT**\nLaptop CPU temperature is critical: **%.1f°C**!", (unsigned long long)cfg.admin_user_id, temp_val);
 
       struct discord_create_message params = { .content = msg };
       discord_create_message(client, cfg.alert_channel_id, &params, NULL);
@@ -270,28 +295,7 @@ static void on_check_timer(struct discord *client)
     }
   }
 
-  if (!status_msg_searched)
-  {
-    status_msg_searched = true;
-    struct discord_get_channel_messages params = { .limit = 20 };
-    struct discord_messages msgs = { 0 };
-
-    struct discord_ret_messages ret = { .sync = &msgs };
-    if (CCORD_OK == discord_get_channel_messages(client, cfg.status_channel_id, &params, &ret))
-    {
-      const struct discord_user *bot_user = discord_get_self(client);
-      for (int i = 0; i < msgs.size; i++)
-      {
-        if (msgs.array[i].author->id == bot_user->id && msgs.array[i].embeds->size > 0)
-        {
-          status_message_id = msgs.array[i].id;
-          break;
-        }
-      }
-      discord_messages_cleanup(&msgs);
-    }
-  }
-
+  /* 5. Update or Send the Status Embed */
   struct discord_embed_field fields[8];
   int field_count = 0;
   char status_val[256], temp_val_str[128], temp_channel_str[64], updated_str[128];
@@ -302,7 +306,20 @@ static void on_check_timer(struct discord *client)
   if (status_message_id != 0)
   {
     struct discord_edit_message edit_params = { .embeds = &(struct discord_embeds){ .size = 1, .array = &embed } };
-    if (CCORD_OK == discord_edit_message(client, cfg.status_channel_id, status_message_id, &edit_params, NULL)) edited = true;
+    struct discord_message edited_msg = { 0 };
+    struct discord_ret_message ret = { .sync = &edited_msg };
+
+    int code = discord_edit_message(client, cfg.status_channel_id, status_message_id, &edit_params, &ret);
+    if (code == CCORD_OK)
+    {
+      edited = true;
+      discord_message_cleanup(&edited_msg);
+    }
+    else
+    {
+      status_message_id = 0;
+      remove("status_msg.id");
+    }
   }
 
   if (!edited)
@@ -314,6 +331,7 @@ static void on_check_timer(struct discord *client)
     if (CCORD_OK == discord_create_message(client, cfg.status_channel_id, &send_params, &ret))
     {
       status_message_id = sent_msg.id;
+      save_persisted_msg_id(status_message_id);
       discord_message_cleanup(&sent_msg);
     }
   }

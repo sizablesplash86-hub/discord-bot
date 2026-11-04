@@ -9,6 +9,7 @@
 /* POSIX headers */
 #include <unistd.h> // (POSIX standard symbolic constants and system call prototypes)
 #include <glob.h> // (Pathname pattern matching)
+#include <ctype.h>
 #include <pthread.h> // (POSIX threads)
 #include <netdb.h> // (Network database operations and DNS resolution)
 #include <sys/types.h> // (Fundamental system data types like pid_t and uid_t)
@@ -17,6 +18,7 @@
 
 /* Concord C Library */
 #include <concord/discord.h>
+#include <concord/discord_codecs.h>
 #include <concord/log.h>
 
 /* Libssh Library */
@@ -25,11 +27,13 @@
 #include <libssh2_publickey.h>
 
 /* bot token and such */
-#include <hide_from_github/bot.h>
+//#include <hide_from_github/bot.h>
 
 
 /* Unused... I think */
 #define _POSIX_C_SOURCE 200809L
+
+#define CONF_FILE "bot_config.conf"
 
 /* structure things */
 typedef struct

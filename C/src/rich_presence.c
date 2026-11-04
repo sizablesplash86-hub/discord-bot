@@ -72,7 +72,7 @@ void on_cycle(struct discord *client)
   last_check = now;
 
   struct stat st;
-  if (stat("rich_presence.conf", &st) != 0) return;
+  if (stat("bot_config.conf", &st) != 0) return;
   if (st.st_mtime == last_mtime) return;
 
   last_mtime = st.st_mtime;
@@ -82,6 +82,6 @@ void on_cycle(struct discord *client)
 void rich_presence(struct discord *client, const struct discord_ready *event)
 {
   struct stat st;
-  if (stat("rich_presence.conf", &st) == 0) last_mtime = st.st_mtime;
+  if (stat("bot_config.conf", &st) == 0) last_mtime = st.st_mtime;
   load_presence(client);
 }

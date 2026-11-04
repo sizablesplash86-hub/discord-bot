@@ -6,15 +6,19 @@
 
 /* POSIX headers */
 #include <sys/stat.h>  // used by the rich presence thing
+#include <ctype.h>
 
 /* Concord headers */
 #include <concord/discord.h>
 #include <concord/log.h>
 #include <concord/discord_codecs.h>
 
+#include <windows_headers/windows.h>
+
 /* Define stuff */
 #define GUILD_ID 1234567898765431
-#define CURRENT_VERSION "1.0.0"
+#define REPO_URL "https://api.github.com/repos/sizablesplash86-hub/discord-bot/releases/latest"
+#define CURRENT_VERSION "1.0.1"
 
 /* Characters */
 extern char BOT_TOKEN[256];
@@ -36,6 +40,7 @@ void fake_ban_interaction(struct discord *client, const struct discord_interacti
 /* on message commands */
 void hist(struct discord *client, const struct discord_message *event);
 void bt_inf(struct discord *client, const struct discord_message *event);
+void website(struct discord *client, const struct discord_message *event);
 
 /* Other stuff */
 void rich_presence(struct discord *client, const struct discord_ready *event);

@@ -33,7 +33,7 @@ bot_config startup(void)
     fclose(fp);
     printf("\n[*] Config created! Input your needed info and rerun.\n");
 
-    FILE *rm = fopen("README.md", "w");
+    FILE *rm = fopen("starter_guide.md", "w");
     if (rm == NULL) 
     {
       printf("ERROR! Failed to create starter guide file. Just read the GitHub docs.\n");
@@ -51,7 +51,7 @@ bot_config startup(void)
         "[Service]\n"
         "Type=simple\n"
         "User=root\n"
-        "ExecStart=/path/to/binary/here/lorem-ipsum\n"
+        "ExecStart=/path/to/binary/here/status-checking\n"
         "Restart=always\n"
         "RestartSec=10\n\n"
 
@@ -62,7 +62,7 @@ bot_config startup(void)
       );
       fclose(rm);
     }
-    if (system("ls README.md > /dev/null") == 0) printf("\n[*] README sucessfully created\n");
+    if (system("ls starter_guide.md > /dev/null") == 0) printf("\n[*] README sucessfully created\n");
     return config;
   }
 
