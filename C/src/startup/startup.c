@@ -29,17 +29,19 @@ int create_conf(void)
     "  notify no;  # change to yes if you desire to\n"
     "  user _;  # user ID of who to ping\n"
     "  channel _;  # channel where to notify\n"
-    "}\n",
+    "}\n\n",
     CURRENT_VERSION
   );
 
   fclose(fp);
 
   // creating folders for 
-  if (mkdir("apps", 0775) != 0) printf("Failed to create folder for apps\n");
-  if (mkdir("commands", 0775) != 0) printf("Failed to create commands folder\n");
+  if (mkdir(apps_dir, 0775) != 0) printf("Failed to create folder for apps\n");
+  if (mkdir(cmds_dir, 0775) != 0) printf("Failed to create commands folder\n");
 
-  FILE *def = fopen("apps/default.app", "w");
+  char def_app[512];
+  snprintf(def_app, sizeof(def_app), "%s/default.app", apps_dir);
+  FILE *def = fopen(def_app, "w");
   if (def == NULL) printf("Failed to create default app config\n");
 
   fprintf(def,
@@ -65,7 +67,9 @@ int create_conf(void)
 
   fclose(def);
 
-  FILE *de = fopen("commands/default.cmd", "w");
+  char def_cmd[512];
+  snprintf(def_cmd, sizeof(def_cmd), "%s/default.cmd", cmds_dir);
+  FILE *de = fopen(def_cmd, "w");
   if (de == NULL) printf("Failed to create default cmd config\n");
 
   fprintf(de,

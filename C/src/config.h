@@ -9,6 +9,7 @@
 #include <sys/stat.h>  // used by the rich presence thing
 #include <unistd.h>  // required for sleeping in the SDB checker
 #include <pthread.h>  // for the SDB checker
+#include <dirent.h>  // needed for reading cmds & apps directories
 
 /* Concord headers */
 #include <concord/discord.h>
@@ -44,6 +45,12 @@ extern char chnl_id[512];
 /* config file */
 int startup(void);
 int bt_conf(void);
+
+/* custom cmds & apps */
+int read_cmds(void);
+int read_apps(void);
+int app_file(const char *app_path);
+int cmd_file(const char *cmd_path);
 
 /* basic needed stuff */
 void on_ready(struct discord *client, const struct discord_ready *event);

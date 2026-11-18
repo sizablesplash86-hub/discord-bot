@@ -14,6 +14,14 @@ typedef struct
 
 } bot_config;
 
+typedef struct
+{
+  char name[128];
+  char desc[512];
+  char funct[128];
+  char out[1024];
+} app_conf;
+
 int next_token(FILE *fp, char *buf, size_t max_len)
 {
   int c;
@@ -37,7 +45,6 @@ int next_token(FILE *fp, char *buf, size_t max_len)
 
   c = fgetc(fp);
   
-  // Handle structural single-character tokens
   if (c == '{' || c == '}' || c == ';')
   {
     buf[0] = (char)c;
@@ -45,12 +52,11 @@ int next_token(FILE *fp, char *buf, size_t max_len)
     return 1;
   }
 
-  // Handle quoted strings (e.g. "Lorem Ipsum")
   if (c == '"')
   {
     while ((c = fgetc(fp)) != EOF)
     {
-      if (c == '"') // Closing quote found
+      if (c == '"')
       {
         break;
       }
@@ -319,6 +325,105 @@ int parse_config(bot_config *config)
   return 0;
 }
 
+int app_file(const char *app_path)
+{
+  app_conf cfg = {0};
+
+  FILE *fp = fopen(app_path, "r");
+  if (!fp)
+  {
+    printf("Failed to open config file: %s\n", BOT_CONF);
+    return -1;
+  }
+
+  char token[256];
+  int inside_app_block = 0;
+
+  while (next_token(fp, token, sizeof(token)))
+  {
+    if (strcmp(token, "app") == 0)
+    {
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
+      {
+        inside_app_block = 1;
+        continue;
+      }
+      else
+      {
+        printf("Syntax error: expected '{' after %s\n", token);
+        fclose(fp);
+        return -1;
+      }
+    }
+    else if (inside_app_block)
+    {
+      if (strcmp(token, "}") == 0)
+      {
+        inside_app_block = 0;
+        continue;
+      }
+
+      int directive_handled = 1;
+
+      if (strcmp(token, "name") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(cfg.name, sizeof(cfg.name), "%s", token);
+        }
+      }
+      
+      else if (strcmp(token, "desc") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(cfg.desc, sizeof(cfg.desc), "%s", token);
+        }
+      }
+
+      else if (strcmp(token, "funct") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(cfg.funct, sizeof(cfg.funct), "%s", token);
+        }
+      }
+
+      else if (strcmp(token, "out") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(cfg.out, sizeof(cfg.out), "%s", token);
+        }
+      }
+
+      else
+      {
+        directive_handled = 0;
+        char skip_token[256];
+        while (next_token(fp, skip_token, sizeof(skip_token)))
+        {
+          if (strcmp(skip_token, ";") == 0) break;
+        }
+      }
+
+      if (directive_handled)
+      {
+        if (next_token(fp, token, sizeof(token)) && strcmp(token, ";") != 0)
+        {
+          printf("Syntax error: missing ';' after directive\n");
+          fclose(fp);
+          return -1;
+        }
+      }
+    }
+  }
+
+  fclose(fp);
+
+  return 0;
+}
+
 int bt_conf(void)
 {
   bot_config cfg = {0};
@@ -390,6 +495,8 @@ int bt_conf(void)
     snprintf(usr_id, sizeof(usr_id), "%s", cfg.usr_id);
     snprintf(chnl_id, sizeof(chnl_id), "%s", cfg.not_chan);
   }
+
+  read_apps();
 
   return 0;
 }
