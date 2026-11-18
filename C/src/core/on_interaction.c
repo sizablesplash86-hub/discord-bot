@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 
 void on_interaction(struct discord *client, const struct discord_interaction *event)
 {

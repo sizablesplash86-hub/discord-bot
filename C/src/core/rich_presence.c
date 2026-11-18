@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 
 static void set_status(struct discord *client, const char *status, enum discord_activity_types type, const char *text)
 {
@@ -28,7 +28,6 @@ static void set_status(struct discord *client, const char *status, enum discord_
 
 static int load_presence(struct discord *client)
 {
-  printf("Rich presence = %s\n", rich_prcnse);
   set_status(client, "online", DISCORD_ACTIVITY_GAME, rich_prcnse);  // Parses status to it
   return 1;
 }
@@ -52,7 +51,14 @@ void on_cycle(struct discord *client)
 
 void rich_presence(struct discord *client, const struct discord_ready *event)
 {
+  if (strcmp(rich_prcnse, "_") == 0 || strcmp(rich_prcnse, "") == 0)
+  {
+    printf("No rich presence stated. Exiting...\n");
+    return;
+  }
+/*
   struct stat st;
   if (stat(BOT_CONF, &st) == 0) last_mtime = st.st_mtime;
+*/
   load_presence(client);
 }

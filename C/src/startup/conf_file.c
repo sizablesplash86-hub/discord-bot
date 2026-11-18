@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 
 typedef struct
 {
@@ -7,24 +7,11 @@ typedef struct
   char bot_token[256];
   char rich_presence[512];
   char status[512];
-  char cmd[128];
 
-  char app[128];  // add something for this
+  char notify[64];
+  char usr_id[512];
+  char not_chan[512];
 
-/*  For status checker but too lazy to remove
-  u64snowflake testing_channel;
-  u64snowflake status_channel_id;
-  u64snowflake admin_user_id;
-  u64snowflake alert_channel_id;
-  u64snowflake temp_channel_id;
-  u64snowflake status_msg_id;
-  u64snowflake temp_msg_id;
-  char server_host[256];
-  int server_port;
-  char ssh_user[64];
-  float temp_threshold;
-  long check_interval_ms;
-*/
 } bot_config;
 
 int next_token(FILE *fp, char *buf, size_t max_len)
@@ -107,8 +94,7 @@ int parse_config(bot_config *config)
   int inside_server_block = 0;
   int inside_main_block = 0;
   int inside_status_block = 0;
-  int inside_text_block = 0;
-  int inside_app_block = 0;
+  int inside_update_block = 0;
 
   char error[512];
 
@@ -144,11 +130,11 @@ int parse_config(bot_config *config)
       }
     }
 
-    else if (strcmp(token, "text_cmds") == 0)
+    else if (strcmp(token, "update") == 0)
     {
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
-        inside_text_block = 1;
+        inside_update_block = 1;
         continue;
       }
       else
@@ -158,22 +144,6 @@ int parse_config(bot_config *config)
         return -1;
       }
     }
-
-    else if (strcmp(token, "slash_cmds") == 0)
-    {
-      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
-      {
-        inside_app_block = 1;
-        continue;
-      }
-      else
-      {
-        printf("Syntax error: expected '{' after %s\n", token);
-        fclose(fp);
-        return -1;
-      }
-    }
-
 
 
     else if (inside_main_block)
@@ -284,14 +254,63 @@ int parse_config(bot_config *config)
       }
     }
 
-    else if (inside_text_block)
+    else if (inside_update_block)
     {
-      TODO: // add this later
-    }
+      if (strcmp(token, "}") == 0)
+      {
+        inside_status_block = 0;
+        continue; 
+      }
 
-    else if (inside_app_block)
-    {
-      TODO2: // add this later
+      int directive_handled = 1;
+
+
+      if (strcmp(token, "notify") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->notify, sizeof(config->notify), "%s", token);
+        }
+        else snprintf(error, sizeof(error), "%s", token);
+      }
+
+      else if (strcmp(token, "user") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->usr_id, sizeof(config->usr_id), "%s", token);
+        }
+        else snprintf(error, sizeof(error), "%s", token);
+      }
+
+      else if (strcmp(token, "channel") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->not_chan, sizeof(config->not_chan), "%s", token);
+        }
+        else snprintf(error, sizeof(error), "%s", token);
+      }
+
+      else
+      {
+        directive_handled = 0;
+        char skip_token[256];
+        while (next_token(fp, skip_token, sizeof(skip_token)))
+        {
+          if (strcmp(skip_token, ";") == 0) break;
+        }
+      }
+
+      if (directive_handled)
+      {
+        if (next_token(fp, token, sizeof(token)) && strcmp(token, ";") != 0)
+        {
+          printf("Syntax error: missing ';' after directive\n");
+          fclose(fp);
+          return -1;
+        }
+      }
     }
 
     else printf("Testing\n");
@@ -306,9 +325,9 @@ int bt_conf(void)
 
   if (parse_config(&cfg) == 0)
   {
-    if (strcmp(cfg.bot_token, "_") == 0)
+    if (strcmp(cfg.bot_token, "_") == 0 || strcmp(cfg.bot_token, "") == 0)
     {
-      printf("BOT TOKEN NOT FOUND!! Please enter one.\n");
+      printf("\033[31mBOT TOKEN NOT FOUND!!\033[0m Please enter one.\n");
       return -1;
     }
     else printf("Sucessfully read bot config\n");
@@ -338,10 +357,39 @@ int bt_conf(void)
     return -1;
   }
 
+  else if (cfgmaj > curmaj || cfgmin > curmin || cfgpat > curpat) printf("\nEither you're me testing,\n"
+    "or you changed the version,\n"
+    "or someone who compiled the code yourself.\n"
+    "Either way, continue.\n\n"
+  );
+
+  else if (cfgmaj == curmaj || cfgmin == curmin || cfgpat == curpat) printf("Config version matches code version\n");
+
+  snprintf(bot_name, sizeof(bot_name), "%s", cfg.bot_name);
   snprintf(BOT_TOKEN, sizeof(BOT_TOKEN), "%s", cfg.bot_token);
   snprintf(rich_prcnse, sizeof(rich_prcnse), "%s", cfg.rich_presence);
+  snprintf(status, sizeof(status), "%s", cfg.status);
 
-  TODO3: // add some way to continue from here
+  printf("\nConfig read:\n\n"
+
+    "  Not showing bot token for privacy\n\n"
+
+    "  Bot name = \"%s\"\n"
+    "  Rich presence = \"%s\"\n"
+    "  Custom status = \"%s\"\n"
+    "\n",
+    bot_name, rich_prcnse, status
+  );
+  if (
+    strcmp(cfg.notify, "yes") == 0 ||
+    strcmp(cfg.notify, "Yes") == 0 ||
+    strcmp(cfg.notify, "YES") == 0
+  )
+  {
+    snprintf(ntfy, sizeof(ntfy), "%s", cfg.notify);
+    snprintf(usr_id, sizeof(usr_id), "%s", cfg.usr_id);
+    snprintf(chnl_id, sizeof(chnl_id), "%s", cfg.not_chan);
+  }
 
   return 0;
 }

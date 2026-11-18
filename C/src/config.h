@@ -7,11 +7,16 @@
 
 /* POSIX headers */
 #include <sys/stat.h>  // used by the rich presence thing
+#include <unistd.h>  // required for sleeping in the SDB checker
+#include <pthread.h>  // for the SDB checker
 
 /* Concord headers */
 #include <concord/discord.h>
 #include <concord/log.h>
 #include <concord/discord_codecs.h>
+
+// not needed now, but leaving it
+#include <hide_from_github/bot.h>
 
 /* Define stuff */
 #define GUILD_ID 1234567898765431
@@ -19,13 +24,22 @@
 // Uneeded now
 #define REPO_URL "https://api.github.com/repos/sizablesplash86-hub/discord-bot/releases/latest"
 
-#define CURRENT_VERSION "1.0.1"
-#define BOT_CONF "bot_config.conf"
+#define CURRENT_VERSION "1.0.2"
+#define BOT_PATH "/home/discord-bot"
 
 /* Characters */
+extern char BOT_CONF[512];
+extern char apps_dir[512];
+extern char cmds_dir[512];
 extern char BOT_TOKEN[256];
-extern char status[256];
+extern char bot_name[128];
 extern char rich_prcnse[256];
+extern char status[256];
+
+/* for updating */
+extern char ntfy[64];
+extern char usr_id[512];
+extern char chnl_id[512];
 
 /* config file */
 int startup(void);
@@ -49,6 +63,9 @@ void website(struct discord *client, const struct discord_message *event);
 
 /* Other stuff */
 void rich_presence(struct discord *client, const struct discord_ready *event);
+void set_custom_status(struct discord *client, const struct discord_ready *event);
 void on_cycle(struct discord *client);
-static void set_custom_status(struct discord *client, const char *status, const char *text);
 static void apply_presence(struct discord *client);
+
+// sick of it happening
+int check_sdb(struct discord *client);

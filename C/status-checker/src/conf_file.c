@@ -1,25 +1,5 @@
 #include "config.h"
 
-// Just steal the one from the main bot
-
-typedef struct
-{
-  char active[8];
-  char bot_token[128];
-  u64snowflake testing_channel;
-  u64snowflake status_channel_id;
-  u64snowflake admin_user_id;
-  u64snowflake alert_channel_id;
-  u64snowflake temp_channel_id;
-  u64snowflake status_msg_id;
-  u64snowflake temp_msg_id;
-  char server_host[256];
-  int server_port;
-  char ssh_user[64];
-  float temp_threshold;
-  long check_interval_ms;
-} bot_config;
-
 int next_token(FILE *fp, char *buf, size_t max_len)
 {
   int c;
@@ -42,11 +22,31 @@ int next_token(FILE *fp, char *buf, size_t max_len)
   if (c == EOF) return 0;
 
   c = fgetc(fp);
+  
+  // Handle structural single-character tokens
   if (c == '{' || c == '}' || c == ';')
   {
     buf[0] = (char)c;
     buf[1] = '\0';
     return 1;
+  }
+
+  // Handle quoted strings (e.g. "Lorem Ipsum")
+  if (c == '"')
+  {
+    while ((c = fgetc(fp)) != EOF)
+    {
+      if (c == '"') // Closing quote found
+      {
+        break;
+      }
+      if (len < max_len - 1)
+      {
+        buf[len++] = (char)c;
+      }
+    }
+    buf[len] = '\0';
+    return len > 0 ? 1 : 0;
   }
 
   ungetc(c, fp);
@@ -66,87 +66,126 @@ int next_token(FILE *fp, char *buf, size_t max_len)
   return len > 0 ? 1 : 0;
 }
 
-int parse_config(const char *fullpath, ServerConfig *config)
+int parse_config(bot_config *config)
 {
-  FILE *fp = fopen(fullpath, "r");
+  FILE *fp = fopen(CONF_FILE, "r");
   if (!fp)
   {
-    printf("Failed to open config file: %s\n", fullpath);
+    printf("Failed to open config file: %s\n", CONF_FILE);
     return -1;
   }
 
   char token[256];
+
   int inside_server_block = 0;
+  int inside_main_block = 0;
+  int inside_status_block = 0;
+  int inside_text_block = 0;
+  int inside_app_block = 0;
+
+  char error[512];
 
   while (next_token(fp, token, sizeof(token)))
   {
-    if (strcmp(token, "server") == 0)
+    if (strcmp(token, "main") == 0)
     {
       if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
       {
-        inside_server_block = 1;
+        inside_main_block = 1;
+        continue;
       }
       else
       {
-        printf("Syntax error: expected '{' after server\n");
+        printf("Syntax error: expected '{' after %s\n", token);
         fclose(fp);
         return -1;
       }
-    } 
-    else if (inside_server_block)
+    }
+
+    else if (strcmp(token, "status") == 0)
+    {
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
+      {
+        inside_status_block = 1;
+        continue;
+      }
+      else
+      {
+        printf("Syntax error: expected '{' after %s\n", token);
+        fclose(fp);
+        return -1;
+      }
+    }
+
+    else if (strcmp(token, "text_cmds") == 0)
+    {
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
+      {
+        inside_text_block = 1;
+        continue;
+      }
+      else
+      {
+        printf("Syntax error: expected '{' after %s\n", token);
+        fclose(fp);
+        return -1;
+      }
+    }
+
+    else if (strcmp(token, "slash_cmds") == 0)
+    {
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, "{") == 0)
+      {
+        inside_app_block = 1;
+        continue;
+      }
+      else
+      {
+        printf("Syntax error: expected '{' after %s\n", token);
+        fclose(fp);
+        return -1;
+      }
+    }
+
+
+
+    else if (inside_main_block)
     {
       if (strcmp(token, "}") == 0)
       {
-        inside_server_block = 0;
-        break; 
+        inside_main_block = 0;
+        continue; 
       }
 
       int directive_handled = 1;
 
-      if (strcmp(token, "listen") == 0)
+      if (strcmp(token, "version") == 0)
       {
         if (next_token(fp, token, sizeof(token)))
         {
-          snprintf(config->port, sizeof(config->port), "%s", token);
+          snprintf(config->version, sizeof(config->version), "%s", token);
         }
-      } 
-      else if (strcmp(token, "root") == 0)
-      {
-        if (next_token(fp, token, sizeof(token)))
-        {
-          size_t len = strlen(token);
-          if (len > 1 && token[len - 1] == '/') token[len - 1] = '\0';
-          snprintf(config->root, sizeof(config->root), "%s", token);
-        }
-      } 
-      else if (strcmp(token, "server_name") == 0) 
-      {
-        if (next_token(fp, token, sizeof(token)))
-        {
-          snprintf(config->domain, sizeof(config->domain), "%s", token);
-        }
+        else snprintf(error, sizeof(error), "%s", token);
       }
-      else if (strcmp(token, "ssl_certificate") == 0)
+
+      else if (strcmp(token, "bot_name") == 0)
       {
         if (next_token(fp, token, sizeof(token)))
         {
-          snprintf(config->fullchain, sizeof(config->fullchain), "%s", token);
+          snprintf(config->bot_name, sizeof(config->bot_name), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
-      else if (strcmp(token, "ssl_certificate_key") == 0)
+
+      else if (strcmp(token, "BOT_TOKEN") == 0)
       {
         if (next_token(fp, token, sizeof(token)))
         {
-          snprintf(config->privkey, sizeof(config->privkey), "%s", token);
+          snprintf(config->bot_token, sizeof(config->bot_token), "%s", token);
         }
+        else snprintf(error, sizeof(error), "%s", token);
       }
-      else if (strcmp(token, "ssl_trusted_certificate") == 0)
-      {
-        if (next_token(fp, token, sizeof(token)))
-        {
-          snprintf(config->trusted_cert, sizeof(config->trusted_cert), "%s", token);
-        }
-      }
+
       else
       {
         directive_handled = 0;
@@ -167,42 +206,171 @@ int parse_config(const char *fullpath, ServerConfig *config)
         }
       }
     }
-    else
+
+    else if (inside_status_block)
     {
-      printf("Could not find server block\n");
-      return -1;
+      if (strcmp(token, "}") == 0)
+      {
+        inside_status_block = 0;
+        continue; 
+      }
+
+      int directive_handled = 1;
+
+
+      if (strcmp(token, "rich_presence") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->rich_presence, sizeof(config->rich_presence), "%s", token);
+        }
+        else snprintf(error, sizeof(error), "%s", token);
+      }
+
+      else if (strcmp(token, "custom_status") == 0)
+      {
+        if (next_token(fp, token, sizeof(token)))
+        {
+          snprintf(config->status, sizeof(config->status), "%s", token);
+        }
+        else snprintf(error, sizeof(error), "%s", token);
+      }
+
+      else
+      {
+        directive_handled = 0;
+        char skip_token[256];
+        while (next_token(fp, skip_token, sizeof(skip_token)))
+        {
+          if (strcmp(skip_token, ";") == 0) break;
+        }
+      }
+
+      if (directive_handled)
+      {
+        if (next_token(fp, token, sizeof(token)) && strcmp(token, ";") != 0)
+        {
+          printf("Syntax error: missing ';' after directive\n");
+          fclose(fp);
+          return -1;
+        }
+      }
     }
+
+    else if (inside_text_block)
+    {
+      if (strcmp(token, "}") == 0)
+      {
+        inside_text_block = 0;
+        continue; 
+      }
+
+      // Ensure we don't overflow our array
+      if (config->text_cmd_count >= 32)
+      {
+        printf("Error: Too many text commands defined (max 32)\n");
+        char skip_token[256];
+        while (next_token(fp, skip_token, sizeof(skip_token)))
+        {
+          if (strcmp(skip_token, ";") == 0) break;
+        }
+        continue;
+      }
+
+      // The current token is the command trigger (e.g., "ping")
+      text_cmd *cmd = &config->text_cmds[config->text_cmd_count];
+      snprintf(cmd->trigger, sizeof(cmd->trigger), "%s", token);
+
+      // Expect the next token to be the response string (handled by quoted string parser)
+      if (next_token(fp, token, sizeof(token)))
+      {
+        snprintf(cmd->response, sizeof(cmd->response), "%s", token);
+      }
+      else
+      {
+        printf("Syntax error: expected response string for command '%s'\n", cmd->trigger);
+        fclose(fp);
+        return -1;
+      }
+
+      // Expect the trailing semicolon ';'
+      if (next_token(fp, token, sizeof(token)) && strcmp(token, ";") != 0)
+      {
+        printf("Syntax error: missing ';' after text command definition\n");
+        fclose(fp);
+        return -1;
+      }
+
+      config->text_cmd_count++;
+    }
+
+    else if (inside_app_block)
+    {
+      TODO2: // add this later
+    }
+
+    else printf("Testing\n");
   }
   fclose(fp);
   return 0;
 }
 
-int ste_conf(const char *full_path, const char *site_name)
+int bt_conf(void)
 {
-  ServerConfig cfg = {0};
+  bot_config cfg = {0};
 
-  if (parse_config(full_path, &cfg) == 0)
+  if (parse_config(&cfg) == 0)
   {
-    printf("Successfully Parsed Config:\n"
-      "  Port:        %s\n"
-      "  Root:        %s\n"
-      "  Server Name: %s\n\n"
-
-      "  SSL info:\n"
-      "    fullchain:      %s\n"
-      "    privkey:        %s\n"
-      "    trusted_cert:   %s\n",
-      cfg.port, cfg.root, cfg.domain,
-
-      cfg.fullchain, cfg.privkey, cfg.trusted_cert
-    );
+    if (strcmp(cfg.bot_token, "_") == 0 || strcmp(cfg.bot_token, "") == 0)
+    {
+      printf("BOT TOKEN NOT FOUND!! Please enter one.\n");
+      return -1;
+    }
+    else printf("Sucessfully read bot config\n");
   }
 
   else
   {
-    printf("Error in site config\n");
+    printf("Error in bot config\n");
     return -1;
   }
+
+  int cfgmaj, cfgmin, cfgpat;
+  int curmaj, curmin, curpat;
+
+  sscanf(cfg.version, "%d.%d.%d", &cfgmaj, &cfgmin, &cfgpat);
+  sscanf(CURRENT_VERSION, "%d.%d.%d", &curmaj, &curmin, &curpat);
+
+  if (cfgmaj < curmaj || cfgmin < curmin || cfgpat < curpat)
+  {
+    printf(
+      "\nERROR! Config version is less than code version\n"
+      "  Config version = %d.%d.%d\n"
+      "  Code version = %d.%d.%d\n"
+      "Please delete config and rerun\n\n",
+      cfgmaj, cfgmin, cfgpat, curmaj, curmin, curpat
+    );
+    return -1;
+  }
+
+  snprintf(bot_name, sizeof(bot_name), "%s", cfg.bot_name);
+  snprintf(BOT_TOKEN, sizeof(BOT_TOKEN), "%s", cfg.bot_token);
+  snprintf(rich_prcnse, sizeof(rich_prcnse), "%s", cfg.rich_presence);
+  snprintf(status, sizeof(status), "%s", cfg.status);
+
+  printf("\nConfig read:\n\n"
+
+    "  Not showing bot token for privacy\n\n"
+
+    "  Bot name = \"%s\"\n"
+    "  Rich presence = \"%s\"\n"
+    "  Custom status = \"%s\"\n"
+    
+    "\n",
+    bot_name, rich_prcnse, status
+  );
+
+  TODO3: // Do some way for the commands
 
   return 0;
 }
